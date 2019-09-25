@@ -2,7 +2,7 @@
 
 # Português
 
-um aplicativo que mostra a letalidade policial no Brasil por raça e a proporção de ocorrências investigadas
+Um aplicativo que mostra a letalidade policial no Brasil por raça e a proporção de ocorrências investigadas
 
 A app that show the death by police action per race and how much of those ocorrencias was investigated
 
