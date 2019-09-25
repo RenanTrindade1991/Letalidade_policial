@@ -1,6 +1,6 @@
 # Letalidade_policial
 
-# Português
+### Português
 
 Um aplicativo que mostra a letalidade policial no Brasil por raça e a proporção de ocorrências investigadas
 
@@ -8,7 +8,7 @@ A app that show the death by police action per race and how much of those ocorre
 
 Aplicativo criado com o pacote microdatasus de Raphael Saldanha
 
-## English
+#### English
 
 This app was created with the microdatasus packge from Raphael Saldanha 
 
