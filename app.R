@@ -1,7 +1,12 @@
+# Get data-----------------
+
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(shiny)
+library(gridExtra)
+library(shinydashboard)
+library(RColorBrewer)
 
 dados <- read.csv("Data/DATASUS DOEXT")
 
@@ -21,120 +26,117 @@ dados$FONTE <- ifelse(is.na(dados$FONTE), "Desconhecido", dados$FONTE)
 dados$TPPOS <- as.character(dados$TPPOS)
 dados$TPPOS <- ifelse(is.na(dados$TPPOS), "Desconhecido", dados$TPPOS)
 
-ui <- navbarPage(title = "Mortes por intercenção policial",
+
 #POR RACA---------------
-    tabPanel("Por Raça",
-    fluidPage(
-    titlePanel("Por Raça"),
-     sidebarLayout(
-        sidebarPanel(
-            selectInput("circobito", "Tipo de ocorrência", unique(dados$CIRCOBITO)),
-            selectInput("lococor", "Local da morte", unique(dados$LOCOCOR), multiple = TRUE, 
-                        selected = unique(dados$LOCOCOR)),
-            selectInput("fonte", "Fonte", unique(dados$FONTE), multiple = TRUE, 
-                        selected = unique(dados$FONTE)),
-            checkboxGroupInput("invest", "", unique(dados$TPPOS), selected = unique((dados$TPPOS))),
-            sliderInput("bin", "Ajuste das colunas", 30, 200, 60)
-            ),
-        mainPanel(dateRangeInput("Data", "Período", start =  "2006-01-01", 
-                                  end = "2017-12-31",
-                                  min = "2006-01-01", 
-                                  max = "2017-12-31"), 
-                  tableOutput("tableraca"), 
-                  plotOutput("plotraca")
-        )#mainPanel
-        )#slidebar
-        )#FluidPage
-        ),
-#POR TPPOS-----------
-    tabPanel("Investigação",
-             fluidPage(
-                 
-                 titlePanel("Investigação"),
-                 
-                 # Sidebar with a slider input for number of bins 
-                 
-                 sidebarLayout(
-                     sidebarPanel(
-                         selectInput("circobitotppos", "Tipo de ocorrência", unique(dados$CIRCOBITO)),
-                         selectInput("lococortppos", "Local da morte", unique(dados$LOCOCOR), multiple = TRUE, 
-                                     selected = unique(dados$LOCOCOR)),
-                         selectInput("fontetppos", "Fonte", unique(dados$FONTE), multiple = TRUE, 
-                                     selected = unique(dados$FONTE)),
-                         selectInput("racatppos", "Raça/Cor", unique(dados$RACACOR2), selected = unique((dados$RACACOR2)), 
-                                     multiple = TRUE),
-                         sliderInput("bintppos", "Ajuste das colunas", 30, 200, 60)
-                         
-                     ),
+ui <- dashboardPage(
+    dashboardHeader( title = "Letalidade policial"
                      
                      
-                     mainPanel(dateRangeInput("Datatppos", "Período", start =  "2006-01-01", 
-                                              end = "2017-12-31",
-                                              min = "2006-01-01", 
-                                              max = "2017-12-31"), 
-                               plotOutput("plottppos"), 
-                               plotOutput("plottppos2")
-        )#mainPanel
-        )#slidebar
-        )#FluidPage
-        )
-        )#navBarPage
-        
+    ),#dashHEADER
     
+    dashboardSidebar(
+        selectInput("lococor", "Local da morte", unique(dados$LOCOCOR), multiple = TRUE, 
+                    selected = unique(dados$LOCOCOR)),
+        selectInput("fonte", "Fonte", unique(dados$FONTE), multiple = TRUE, 
+                    selected = unique(dados$FONTE)),
+        checkboxGroupInput("invest", "Investigação", unique(dados$TPPOS), selected = unique((dados$TPPOS))),
+        checkboxGroupInput("racacor", "Raça/cor", unique(dados$RACACOR2), selected = unique((dados$RACACOR2))),
+        sliderInput("bin", "Ajuste das colunas", 30, 200, 60)
+        
+    ),#dashSIDEBAR
+    
+    dashboardBody(
+        fluidRow(
+            title = "pizza",
+            dateRangeInput("Data", "Período", start =  "2006-01-01", 
+                           end = "2017-12-31",
+                           min = "2006-01-01", 
+                           max = "2017-12-31")
+            
+            
+        ),#fluidrow
+        fluidRow(
+            box(
+                plotOutput('plotpizza1')
+            ),#box
+            box(
+                plotOutput('plotpizza2')
+            )#box
+        ),#fluidRow
+        fluidRow(
+            
+            plotOutput("plotraca")
+            
+        )#fluidrow
+    )#dashBODY
+    
+)#dashPAGE
+
+
+#POR TPPOS-----------
+
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
-#POR RACA PLOT-----------
-    output$tableraca <- renderTable({
+    #POR RACA PLOT-----------
+    output$plotpizza1 <- renderPlot({
         numeros <-dados %>% filter(DTOBITO %in% seq.Date(min(input$Data), 
-                                                          max(input$Data), by = "day"),
-                                    LOCOCOR %in% input$lococor,
-                                    FONTE %in% input$fonte,
-                                    TPPOS %in% input$invest) %>% 
+                                                         max(input$Data), by = "day"),
+                                   RACACOR2 %in% input$racacor,
+                                   LOCOCOR %in% input$lococor,
+                                   FONTE %in% input$fonte,
+                                   TPPOS %in% input$invest) %>% 
             group_by(RACACOR2) %>% summarise(n())
-        names(numeros) <- c("Raça/cor", "Numero_de_casos")
+        names(numeros) <- c("Raça", "Numero_de_casos")
         numeros$Porcentagem_de_casos <- (numeros$Numero_de_casos*100)/sum(numeros$Numero_de_casos)
         numeros[6,2] <- sum(numeros$Numero_de_casos)
         numeros[6,1] <- "Total"
-        numeros
+        pizza1 <- numeros %>% ggplot(aes(x = "", y = Porcentagem_de_casos , fill = Raça)) +
+            geom_bar(width = 1, stat = "identity") + 
+            scale_fill_brewer(type = 'div', palette = "Set1") + 
+            labs(title = "Por Raça/cor") +
+            theme_light() + coord_polar("y", start=0)
         
-        })
-
+        pizza1
+    })
+    
+    output$plotpizza2 <- renderPlot({
+        
+        
+        numeros2 <-dados %>% filter(DTOBITO %in% seq.Date(min(input$Data), 
+                                                          max(input$Data), by = "day"),
+                                    RACACOR2 %in% input$racacor,
+                                    LOCOCOR %in% input$lococor,
+                                    FONTE %in% input$fonte,
+                                    TPPOS %in% input$invest) %>% 
+            group_by(TPPOS) %>% summarise(n())
+        names(numeros2) <- c("Investigação", "Numero_de_casos")
+        numeros2$Porcentagem_de_casos <- (numeros2$Numero_de_casos*100)/sum(numeros2$Numero_de_casos)
+        numeros2[6,2] <- sum(numeros2$Numero_de_casos)
+        numeros2[6,1] <- "Total"
+        pizza2 <- numeros2 %>% ggplot(aes(x = "", y = Porcentagem_de_casos , fill = Investigação)) +
+            geom_bar(width = 1, stat = "identity") + 
+            scale_fill_brewer(type = 'div', palette = "Set1") + 
+            labs(title = "Investigação") +
+            theme_light() + coord_polar("y", start=0)
+        pizza2
+    })
+    
     output$plotraca <- renderPlot({
         dados %>% filter(LOCOCOR %in% input$lococor,
-                          FONTE %in% input$fonte,
-                          TPPOS %in% input$invest) %>% 
-            ggplot(aes(x = DTOBITO, fill = RACACOR2)) +
-            geom_histogram(color = "white", binwidth = input$bin) + 
+                         RACACOR2 %in% input$racacor,
+                         FONTE %in% input$fonte,
+                         TPPOS %in% input$invest) %>% 
+            ggplot(aes(x = DTOBITO)) +
+            geom_histogram(color = "white", fill = "blue", binwidth = input$bin) + 
             scale_x_date(limits = input$Data) +
-            scale_y_continuous(labels = scales::comma) +
+            scale_y_continuous(labels = scales::comma) + xlab("Data") + 
+            ylab("Número de casos") +
             theme_light()
         
     })
     
-#POR TPPOS PLOT----------------
-    output$plottppos2 <- renderPlot({
-        dados %>% filter(LOCOCOR %in% input$lococortppos,
-                         FONTE %in% input$fontetppos,
-                         RACACOR2 %in% input$racatppos) %>% 
-            ggplot(aes(x = DTOBITO, y = DTINVESTIG, color = RACACOR2)) + geom_point() + 
-            scale_x_date(limits = input$Datatppos) + 
-            scale_y_date(limits = input$Datatppos) + theme_light()
-        
-    })
-    
-    output$plottppos <- renderPlot({
-        dados %>% filter(LOCOCOR %in% input$lococortppos,
-                         FONTE %in% input$fontetppos,
-                         RACACOR2 %in% input$racatppos) %>% 
-            ggplot(aes(x = DTOBITO, fill = TPPOS)) +
-            geom_histogram(color = "white", binwidth = input$bintppos) + 
-            scale_x_date(limits = input$Datatppos) +
-            scale_y_continuous(labels = scales::comma) +
-            theme_light()
-        
-    })
     
 }
 
