@@ -56,13 +56,22 @@ ui <- dashboardPage(
             
         ),#fluidrow
         fluidRow(
-            box(
+            box(collapsible = TRUE,
                 plotOutput('plotpizza1')
             ),#box
-            box(
+            box(collapsible = TRUE,
                 plotOutput('plotpizza2')
             )#box
         ),#fluidRow
+        fluidRow(
+            box(collapsible = TRUE,
+                plotOutput('plotidade')
+            ),#box
+            box(collapsible = TRUE,
+                plotOutput('plotuf')
+            )#box
+        ),#fluidRow
+
         fluidRow(
             
             plotOutput("plotraca")
@@ -79,7 +88,41 @@ ui <- dashboardPage(
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
-    #POR RACA PLOT-----------
+    
+    output$plotuf <- renderPlot({
+        
+        numeros3 <-dados %>% filter(DTOBITO %in% seq.Date(min(input$Data), 
+                                                          max(input$Data), by = "day"),
+                                    RACACOR2 %in% input$racacor,
+                                    LOCOCOR %in% input$lococor,
+                                    FONTE %in% input$fonte,
+                                    TPPOS %in% input$invest) %>% 
+            group_by(munResUf) %>% summarise(n())
+        names(numeros3) <- c("UF", "Numero_de_casos")
+        numeros3$Porcentagem_de_casos <- (numeros3$Numero_de_casos*100)/sum(numeros3$Numero_de_casos)
+        numeros3[6,2] <- sum(numeros3$Numero_de_casos)
+        numeros3[6,1] <- "Total"
+        pizza3 <- numeros3 %>% ggplot(aes(x = UF, y = Porcentagem_de_casos)) +
+            geom_col(color = "black", fill = "darkblue") + 
+            labs(title = "Por UF") +
+            theme_light() + coord_flip()
+        pizza3
+    })
+    
+    output$plotidade <- renderPlot({
+      
+        dados %>% filter(DTOBITO %in% seq.Date(min(input$Data), 
+                                               max(input$Data), by = "day"),
+                         RACACOR2 %in% input$racacor,
+                         LOCOCOR %in% input$lococor,
+                         FONTE %in% input$fonte,
+                         TPPOS %in% input$invest) %>% 
+            ggplot(aes(x = IDADEanos)) + 
+            geom_histogram(color = "black", fill = "darkblue") + 
+            theme_light() + ylab("Número de mortos") + xlab("Idade")
+        
+    })
+    
     output$plotpizza1 <- renderPlot({
         numeros <-dados %>% filter(DTOBITO %in% seq.Date(min(input$Data), 
                                                          max(input$Data), by = "day"),
@@ -129,7 +172,7 @@ server <- function(input, output) {
                          FONTE %in% input$fonte,
                          TPPOS %in% input$invest) %>% 
             ggplot(aes(x = DTOBITO)) +
-            geom_histogram(color = "white", fill = "blue", binwidth = input$bin) + 
+            geom_histogram(color = "black", fill = "darkblue", binwidth = input$bin) + 
             scale_x_date(limits = input$Data) +
             scale_y_continuous(labels = scales::comma) + xlab("Data") + 
             ylab("Número de casos") +
